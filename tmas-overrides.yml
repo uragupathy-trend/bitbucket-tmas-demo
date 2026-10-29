@@ -1,0 +1,227 @@
+# TMAS Override Configuration for Bitbucket Demo
+# This file configures TMAS scanning behavior for the Bitbucket Pipelines demo
+
+# Global scan settings
+scan:
+  # Enable verbose output for demo purposes
+  verbose: true
+  
+  # Timeout settings (in seconds)
+  timeout: 1800  # 30 minutes for comprehensive scanning
+  
+  # Output format
+  output:
+    format: "json"
+    include_raw: true
+
+# Vulnerability scanning configuration
+vulnerabilities:
+  # Enable vulnerability scanning
+  enabled: true
+  
+  # Severity levels to report
+  severity_levels:
+    - "critical"
+    - "high"
+    - "medium"
+    - "low"
+  
+  # Vulnerability database settings
+  database:
+    update_before_scan: true
+    sources:
+      - "nvd"
+      - "github"
+      - "osv"
+
+# Secret scanning configuration
+secrets:
+  # Enable secret scanning
+  enabled: true
+  
+  # Secret detection rules
+  rules:
+    # API Keys
+    - name: "aws_access_key"
+      pattern: "AKIA[0-9A-Z]{16}"
+      description: "AWS Access Key ID"
+    
+    - name: "aws_secret_key"
+      pattern: "[A-Za-z0-9/+=]{40}"
+      description: "AWS Secret Access Key"
+    
+    - name: "github_token"
+      pattern: "ghp_[A-Za-z0-9]{36}"
+      description: "GitHub Personal Access Token"
+    
+    - name: "slack_token"
+      pattern: "xox[baprs]-[A-Za-z0-9-]+"
+      description: "Slack Token"
+    
+    - name: "private_key"
+      pattern: "-----BEGIN [A-Z ]+PRIVATE KEY-----"
+      description: "Private Key"
+    
+    - name: "database_url"
+      pattern: "(mysql|postgres|mongodb)://[^\\s]+"
+      description: "Database Connection String"
+  
+  # Files to exclude from secret scanning
+  exclude_paths:
+    - "*.log"
+    - "*.tmp"
+    - "node_modules/**"
+    - ".git/**"
+    - "**/.tmas/**"
+
+# Malware scanning configuration
+malware:
+  # Enable malware scanning for containers
+  enabled: true
+  
+  # Scan timeout
+  timeout: 600  # 10 minutes
+  
+  # File types to scan
+  file_types:
+    - "executable"
+    - "script"
+    - "archive"
+
+# Policy evaluation settings
+policy:
+  # Enable policy evaluation
+  enabled: true
+  
+  # Policy enforcement levels
+  enforcement:
+    # Block build on critical vulnerabilities
+    block_on_critical: false  # Set to false for demo purposes
+    
+    # Block build on high severity vulnerabilities
+    block_on_high: false      # Set to false for demo purposes
+    
+    # Block build on secrets
+    block_on_secrets: false   # Set to false for demo purposes
+    
+    # Log violations without blocking
+    log_violations: true
+
+# Container scanning specific settings
+container:
+  # Base image analysis
+  base_image:
+    analyze: true
+    report_vulnerabilities: true
+  
+  # Layer analysis
+  layers:
+    analyze: true
+    max_layers: 50
+  
+  # SBOM generation
+  sbom:
+    generate: true
+    format: "spdx-json"
+    include_licenses: true
+
+# Repository scanning specific settings
+repository:
+  # File types to scan
+  include_files:
+    - "*.py"
+    - "*.js"
+    - "*.ts"
+    - "*.java"
+    - "*.go"
+    - "*.php"
+    - "*.rb"
+    - "*.cs"
+    - "*.cpp"
+    - "*.c"
+    - "*.h"
+    - "*.yml"
+    - "*.yaml"
+    - "*.json"
+    - "*.xml"
+    - "*.properties"
+    - "*.conf"
+    - "*.config"
+    - "Dockerfile"
+    - "*.dockerfile"
+    - "requirements.txt"
+    - "package.json"
+    - "pom.xml"
+    - "build.gradle"
+    - "Gemfile"
+    - "composer.json"
+  
+  # Directories to exclude
+  exclude_paths:
+    - ".git/**"
+    - "node_modules/**"
+    - "vendor/**"
+    - "target/**"
+    - "build/**"
+    - "dist/**"
+    - "*.min.js"
+    - "*.min.css"
+    - "**/.tmas/**"
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/__pycache__/**"
+
+# Reporting configuration
+reporting:
+  # Report formats to generate
+  formats:
+    - "json"
+    - "sarif"
+  
+  # Include detailed information
+  include_details: true
+  
+  # Include remediation suggestions
+  include_remediation: true
+  
+  # Include CVSS scores
+  include_cvss: true
+
+# Demo-specific settings
+demo:
+  # Mark this as a demo environment
+  environment: "demo"
+  
+  # Allow intentional vulnerabilities for testing
+  allow_test_vulnerabilities: true
+  
+  # Enhanced logging for demonstration
+  enhanced_logging: true
+  
+  # Generate detailed reports for educational purposes
+  detailed_reports: true
+
+# Bitbucket-specific settings
+bitbucket:
+  # Integration settings
+  integration:
+    # Report results to Bitbucket
+    report_to_bitbucket: true
+    
+    # Create annotations on pull requests
+    create_annotations: true
+    
+    # Fail build on policy violations
+    fail_build: false  # Set to false for demo purposes
+  
+  # Pipeline-specific settings
+  pipeline:
+    # Cache TMAS CLI between builds
+    cache_cli: true
+    
+    # Parallel scanning when possible
+    parallel_scanning: true
+    
+    # Artifact retention
+    retain_artifacts: true
+    retention_days: 30

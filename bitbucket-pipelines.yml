@@ -1,0 +1,367 @@
+image: atlassian/default-image:4
+
+definitions:
+  services:
+    docker:
+      memory: 2048
+  caches:
+    tmas-cli: ~/.tmas-cli
+  steps:
+    - step: &install-tmas-cli
+        name: Install TMAS CLI
+        script:
+          - echo "Installing TMAS CLI..."
+          - curl -L -o tmas-cli.tar.gz "https://cli.artifactscan.cloudone.trendmicro.com/tmas-cli/latest/tmas-cli_Linux_x86_64.tar.gz"
+          - tar -xzf tmas-cli.tar.gz
+          - chmod +x tmas
+          - ./tmas version
+          - mkdir -p ~/.tmas-cli
+          - cp tmas ~/.tmas-cli/
+        caches:
+          - tmas-cli
+        artifacts:
+          - tmas
+    
+    - step: &repository-security-scan
+        name: Repository Security Scan
+        script:
+          - echo "=== TMAS Repository Security Scan ==="
+          - echo "Repository: $BITBUCKET_REPO_FULL_NAME"
+          - echo "Branch: $BITBUCKET_BRANCH"
+          - echo "Commit: $BITBUCKET_COMMIT"
+          - echo "Build Number: $BITBUCKET_BUILD_NUMBER"
+          - echo ""
+          
+          # Ensure TMAS CLI is available
+          - |
+            if [ ! -f "./tmas" ]; then
+              echo "TMAS CLI not found, downloading..."
+              curl -L -o tmas-cli.tar.gz "https://cli.artifactscan.cloudone.trendmicro.com/tmas-cli/latest/tmas-cli_Linux_x86_64.tar.gz"
+              tar -xzf tmas-cli.tar.gz
+              chmod +x tmas
+            fi
+          
+          # Show files to be scanned
+          - echo "Files to be scanned:"
+          - find . -name "*.py" -o -name "*.js" -o -name "*.java" -o -name "*.yml" -o -name "*.yaml" -o -name "Dockerfile" | head -20
+          - echo ""
+          
+          # Run TMAS repository scan
+          - echo "Starting TMAS repository scan..."
+          - |
+            ./tmas scan dir:$BITBUCKET_CLONE_DIR \
+              --vulnerabilities \
+              --secrets \
+              --override tmas-overrides.yml \
+              --region $TMAS_REGION \
+              --verbose > tmas-repository-scan-results.json || echo "Scan completed with findings"
+          
+          # Process scan results
+          - echo "Processing scan results..."
+          - |
+            if [ -f "tmas-repository-scan-results.json" ]; then
+              echo "✅ Scan results file created successfully"
+              
+              # Extract key metrics using basic shell commands (no jq dependency)
+              echo ""
+              echo "=== SCAN SUMMARY ==="
+              
+              # Count vulnerabilities
+              VULN_COUNT=$(grep -o '"totalVulnCount":[0-9]*' tmas-repository-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              CRITICAL_COUNT=$(grep -o '"criticalCount":[0-9]*' tmas-repository-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              HIGH_COUNT=$(grep -o '"highCount":[0-9]*' tmas-repository-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              MEDIUM_COUNT=$(grep -o '"mediumCount":[0-9]*' tmas-repository-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              
+              # Count secrets
+              SECRET_COUNT=$(grep -o '"unmitigatedFindingsCount":[0-9]*' tmas-repository-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              TOTAL_SECRET_FINDINGS=$(grep -o '"totalFindingsCount":[0-9]*' tmas-repository-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              
+              echo "📊 VULNERABILITY SUMMARY:"
+              echo "  Total Vulnerabilities: $VULN_COUNT"
+              echo "  Critical: $CRITICAL_COUNT"
+              echo "  High: $HIGH_COUNT"
+              echo "  Medium: $MEDIUM_COUNT"
+              echo ""
+              echo "🔐 SECRET SUMMARY:"
+              echo "  Total Secret Findings: $TOTAL_SECRET_FINDINGS"
+              echo "  Unmitigated Secrets: $SECRET_COUNT"
+              echo ""
+              
+              # Show sample secret findings
+              if [ "$SECRET_COUNT" -gt 0 ]; then
+                echo "🔍 SECRET FINDINGS DETECTED:"
+                grep -o '"type":"[^"]*"' tmas-repository-scan-results.json | head -5 | sed 's/"type":"/ - /' | sed 's/"$//'
+                echo ""
+              fi
+              
+              # Security gate evaluation for demo
+              echo "🚦 SECURITY GATE EVALUATION:"
+              if [ "$SECRET_COUNT" -gt 0 ]; then
+                echo "✅ DEMO VALIDATION: Security scanner correctly detected test secrets"
+                echo "   Found $SECRET_COUNT unmitigated secrets (expected for demo)"
+              else
+                echo "⚠️  DEMO WARNING: Expected to find test secrets for validation"
+              fi
+              
+              if [ "$CRITICAL_COUNT" -gt 0 ]; then
+                echo "✅ DEMO VALIDATION: Critical vulnerabilities detected ($CRITICAL_COUNT found)"
+              fi
+              
+              echo ""
+              echo "📋 NOTE: This is a security testing repository with intentional vulnerabilities."
+              echo "    In production, configure appropriate security gates based on your policy."
+              
+            else
+              echo "❌ Scan results file not found"
+              exit 1
+            fi
+        artifacts:
+          - tmas-repository-scan-results.json
+          - tmas
+    
+    - step: &container-security-scan
+        name: Container Security Scan
+        services:
+          - docker
+        script:
+          - echo "=== TMAS Container Security Scan ==="
+          - echo "Repository: $BITBUCKET_REPO_FULL_NAME"
+          - echo "Branch: $BITBUCKET_BRANCH"
+          - echo "Build Number: $BITBUCKET_BUILD_NUMBER"
+          - echo ""
+          
+          # Ensure TMAS CLI is available
+          - |
+            if [ ! -f "./tmas" ]; then
+              echo "TMAS CLI not found, downloading..."
+              curl -L -o tmas-cli.tar.gz "https://cli.artifactscan.cloudone.trendmicro.com/tmas-cli/latest/tmas-cli_Linux_x86_64.tar.gz"
+              tar -xzf tmas-cli.tar.gz
+              chmod +x tmas
+            fi
+          
+          # Build Docker image
+          - echo "Building Docker image..."
+          - IMAGE_NAME="bitbucket-tmas-demo"
+          - IMAGE_TAG="build-$BITBUCKET_BUILD_NUMBER"
+          - FULL_IMAGE_NAME="$IMAGE_NAME:$IMAGE_TAG"
+          - docker build -t $FULL_IMAGE_NAME .
+          - echo "Built image: $FULL_IMAGE_NAME"
+          - echo ""
+          
+          # Run TMAS container scan
+          - echo "Starting TMAS container scan..."
+          - |
+            ./tmas scan docker:$FULL_IMAGE_NAME \
+              --vulnerabilities \
+              --secrets \
+              --malware \
+              --saveSBOM \
+              --override tmas-overrides.yml \
+              --region $TMAS_REGION \
+              --verbose > tmas-container-scan-results.json || echo "Container scan completed with findings"
+          
+          # Process container scan results
+          - echo "Processing container scan results..."
+          - |
+            if [ -f "tmas-container-scan-results.json" ]; then
+              echo "✅ Container scan results file created successfully"
+              
+              # Extract container scan metrics
+              echo ""
+              echo "=== CONTAINER SCAN SUMMARY ==="
+              
+              # Count vulnerabilities
+              VULN_COUNT=$(grep -o '"totalVulnCount":[0-9]*' tmas-container-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              CRITICAL_COUNT=$(grep -o '"criticalCount":[0-9]*' tmas-container-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              HIGH_COUNT=$(grep -o '"highCount":[0-9]*' tmas-container-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              
+              # Count secrets
+              SECRET_COUNT=$(grep -o '"unmitigatedFindingsCount":[0-9]*' tmas-container-scan-results.json | cut -d':' -f2 | head -1 || echo "0")
+              
+              # Check for SBOM
+              SBOM_GENERATED=$(grep -c '"sbom"' tmas-container-scan-results.json || echo "0")
+              
+              echo "🐳 CONTAINER VULNERABILITIES:"
+              echo "  Total: $VULN_COUNT"
+              echo "  Critical: $CRITICAL_COUNT"
+              echo "  High: $HIGH_COUNT"
+              echo ""
+              echo "🔐 CONTAINER SECRETS:"
+              echo "  Unmitigated: $SECRET_COUNT"
+              echo ""
+              echo "📋 SBOM GENERATION:"
+              if [ "$SBOM_GENERATED" -gt 0 ]; then
+                echo "  ✅ Software Bill of Materials generated"
+              else
+                echo "  ⚠️  SBOM not found in results"
+              fi
+              echo ""
+              
+              # Container security gate
+              echo "🚦 CONTAINER SECURITY GATE:"
+              if [ "$VULN_COUNT" -gt 50 ]; then
+                echo "✅ DEMO VALIDATION: Container vulnerabilities detected ($VULN_COUNT found)"
+                echo "   Expected high count due to vulnerable base image and dependencies"
+              else
+                echo "⚠️  DEMO INFO: Container vulnerability count: $VULN_COUNT"
+              fi
+              
+              if [ "$SECRET_COUNT" -gt 0 ]; then
+                echo "✅ DEMO VALIDATION: Container secrets detected ($SECRET_COUNT found)"
+              fi
+              
+            else
+              echo "❌ Container scan results file not found"
+              exit 1
+            fi
+        artifacts:
+          - tmas-container-scan-results.json
+          - "*.sbom"
+          - tmas
+    
+    - step: &policy-evaluation
+        name: Policy Evaluation
+        script:
+          - echo "=== TMAS Policy Evaluation ==="
+          - echo "Repository: $BITBUCKET_REPO_FULL_NAME"
+          - echo "Branch: $BITBUCKET_BRANCH"
+          - echo "Pull Request: $BITBUCKET_PR_ID"
+          - echo ""
+          
+          # Ensure TMAS CLI is available
+          - |
+            if [ ! -f "./tmas" ]; then
+              echo "TMAS CLI not found, downloading..."
+              curl -L -o tmas-cli.tar.gz "https://cli.artifactscan.cloudone.trendmicro.com/tmas-cli/latest/tmas-cli_Linux_x86_64.tar.gz"
+              tar -xzf tmas-cli.tar.gz
+              chmod +x tmas
+            fi
+          
+          # Run TMAS policy evaluation
+          - echo "Starting TMAS policy evaluation..."
+          - |
+            ./tmas scan dir:$BITBUCKET_CLONE_DIR \
+              --vulnerabilities \
+              --secrets \
+              --evaluatePolicy \
+              --override tmas-overrides.yml \
+              --region $TMAS_REGION \
+              --verbose > tmas-policy-evaluation-results.json || echo "Policy evaluation completed"
+          
+          # Process policy evaluation results
+          - echo "Processing policy evaluation results..."
+          - |
+            if [ -f "tmas-policy-evaluation-results.json" ]; then
+              echo "✅ Policy evaluation results file created successfully"
+              
+              echo ""
+              echo "=== POLICY EVALUATION SUMMARY ==="
+              
+              # Extract policy result
+              POLICY_RESULT=$(grep -o '"result":"[^"]*"' tmas-policy-evaluation-results.json | cut -d':' -f2 | sed 's/"//g' | head -1 || echo "unknown")
+              
+              # Count violations
+              BLOCK_VIOLATIONS=$(grep -c '"blockPolicyViolations"' tmas-policy-evaluation-results.json || echo "0")
+              LOG_VIOLATIONS=$(grep -c '"logPolicyViolations"' tmas-policy-evaluation-results.json || echo "0")
+              
+              echo "📋 POLICY EVALUATION:"
+              echo "  Result: $POLICY_RESULT"
+              echo "  Blocking Violations: $BLOCK_VIOLATIONS"
+              echo "  Log-Only Violations: $LOG_VIOLATIONS"
+              echo ""
+              
+              # Policy decision
+              echo "🚦 POLICY DECISION:"
+              case "$POLICY_RESULT" in
+                "compliant"|"allow")
+                  echo "✅ POLICY COMPLIANT - No violations detected"
+                  ;;
+                "in-violation-of-log-and-block-rules")
+                  echo "❌ POLICY VIOLATIONS DETECTED"
+                  if [ "$BLOCK_VIOLATIONS" -gt 0 ]; then
+                    echo "   🚫 BLOCKING violations found - Build should be blocked"
+                    echo "   📝 Review and fix security issues before proceeding"
+                    # For demo purposes, we'll continue but log the violation
+                    echo "   ℹ️  Demo mode: Continuing for demonstration purposes"
+                  else
+                    echo "   📝 LOG-ONLY violations found - Build can proceed with warnings"
+                  fi
+                  ;;
+                *)
+                  echo "⚠️  POLICY RESULT UNCLEAR: $POLICY_RESULT"
+                  echo "   Manual review recommended"
+                  ;;
+              esac
+              
+            else
+              echo "❌ Policy evaluation results file not found"
+              exit 1
+            fi
+        artifacts:
+          - tmas-policy-evaluation-results.json
+          - tmas
+
+pipelines:
+  default:
+    - step:
+        name: Repository Security Scan (Default)
+        <<: *repository-security-scan
+  
+  branches:
+    main:
+      - parallel:
+          - step:
+              name: Repository Security Scan
+              <<: *repository-security-scan
+          - step:
+              name: Container Security Scan
+              <<: *container-security-scan
+              condition:
+                changesets:
+                  includePaths:
+                    - "Dockerfile"
+                    - "requirements.txt"
+                    - "src/**"
+    
+    develop:
+      - step:
+          name: Repository Security Scan (Develop)
+          <<: *repository-security-scan
+    
+    feature/*:
+      - step:
+          name: Repository Security Scan (Feature)
+          <<: *repository-security-scan
+
+  pull-requests:
+    '**':
+      - parallel:
+          - step:
+              name: Repository Security Scan (PR)
+              <<: *repository-security-scan
+          - step:
+              name: Policy Evaluation (PR)
+              <<: *policy-evaluation
+
+  custom:
+    full-security-scan:
+      - parallel:
+          - step:
+              name: Repository Security Scan
+              <<: *repository-security-scan
+          - step:
+              name: Container Security Scan
+              <<: *container-security-scan
+          - step:
+              name: Policy Evaluation
+              <<: *policy-evaluation
+    
+    container-scan-only:
+      - step:
+          name: Container Security Scan Only
+          <<: *container-security-scan
+    
+    policy-check-only:
+      - step:
+          name: Policy Evaluation Only
+          <<: *policy-evaluation

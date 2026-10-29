@@ -8,12 +8,12 @@ FROM python:3.8-slim
 USER root
 
 # SECURITY ISSUE: Hardcoded secrets in environment variables
-ENV SECRET_KEY="flask-super-secret-key-never-change-this-in-production"
-ENV DB_PASSWORD="super_secret_password_123"
-ENV AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE"
-ENV AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-ENV VISION_ONE_API_KEY="fake-vision-one-api-key-12345-abcdef"
-ENV JWT_SECRET="jwt-super-secret-key-never-change-this"
+ENV SECRET_KEY="REPLACE_ME_SECRET_KEY"
+ENV DB_PASSWORD="REPLACE_ME_DB_PASSWORD"
+ENV AWS_ACCESS_KEY_ID="REPLACE_ME_AWS_ACCESS_KEY_ID"
+ENV AWS_SECRET_ACCESS_KEY="REPLACE_ME_AWS_SECRET_ACCESS_KEY"
+ENV VISION_ONE_API_KEY="REPLACE_ME_VISION_ONE_API_KEY"
+ENV JWT_SECRET="REPLACE_ME_JWT_SECRET"
 
 # SECURITY ISSUE: Installing packages as root without version pinning
 RUN apt-get update && apt-get install -y \
@@ -47,8 +47,9 @@ RUN mkdir -p /tmp/uploads /tmp/backups /tmp/logs && \
 RUN chmod 755 /app/src/*.py
 
 # SECURITY ISSUE: Creating a user but still running as root
+ARG APPUSER_PASSWORD=REPLACE_ME_APPUSER_PASSWORD
 RUN useradd -m -s /bin/bash appuser && \
-    echo "appuser:password123" | chpasswd && \
+    echo "appuser:${APPUSER_PASSWORD}" | chpasswd && \
     usermod -aG sudo appuser
 
 # SECURITY ISSUE: Exposing application on all interfaces

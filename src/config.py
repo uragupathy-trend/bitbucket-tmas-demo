@@ -13,46 +13,46 @@ class Config:
     """
     
     # SECURITY ISSUE: Hardcoded secret key
-    SECRET_KEY = "flask-super-secret-key-never-change-this-in-production"
+    SECRET_KEY = "REPLACE_ME_SECRET_KEY"
     
     # SECURITY ISSUE: Hardcoded database configuration
     DATABASE_CONFIG = {
         'host': 'localhost',
         'port': 5432,
         'username': 'admin',
-        'password': 'super_secret_password_123',  # SECURITY ISSUE: Hardcoded password
+        'password': 'REPLACE_ME_DB_PASSWORD',  # SECURITY ISSUE: Hardcoded password
         'database': 'visionone_demo',
         'ssl_mode': 'disable'  # SECURITY ISSUE: SSL disabled
     }
     
     # SECURITY ISSUE: Hardcoded AWS credentials (FAKE - for testing only)
     AWS_CONFIG = {
-        'access_key_id': 'AKIAIOSFODNN7EXAMPLE',
-        'secret_access_key': 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+        'access_key_id': 'REPLACE_ME_AWS_ACCESS_KEY_ID',
+        'secret_access_key': 'REPLACE_ME_AWS_SECRET_ACCESS_KEY',
         'region': 'us-west-2',
         'bucket': 'vision-one-demo-bucket'
     }
     
     # SECURITY ISSUE: Hardcoded API keys (FAKE - for testing only)
     API_KEYS = {
-        'vision_one': 'fake-vision-one-api-key-12345-abcdef',
-        'github': 'ghp_fake_github_token_for_testing_only_123456789',
-        'slack_webhook': 'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX',
-        'openai': 'sk-fake-openai-key-for-testing-purposes-only',
-        'stripe': 'sk_test_fake_stripe_key_for_testing_only'
+        'vision_one': 'REPLACE_ME_VISION_ONE_API_KEY',
+        'github': 'REPLACE_ME_GITHUB_TOKEN',
+        'slack_webhook': 'https://hooks.slack.com/services/REPLACE_ME',
+        'openai': 'REPLACE_ME_OPENAI_API_KEY',
+        'stripe': 'REPLACE_ME_STRIPE_API_KEY'
     }
     
     # SECURITY ISSUE: Hardcoded JWT configuration
     JWT_CONFIG = {
-        'secret': 'jwt-super-secret-key-never-change-this',
+        'secret': 'REPLACE_ME_JWT_SECRET',
         'algorithm': 'HS256',
         'expiration_hours': 24
     }
     
     # SECURITY ISSUE: Hardcoded encryption keys
     ENCRYPTION_CONFIG = {
-        'key': 'encryption-key-32-bytes-long-fake',  # SECURITY ISSUE: Hardcoded encryption key
-        'iv': 'initialization-vector-16-bytes',      # SECURITY ISSUE: Hardcoded IV
+        'key': 'REPLACE_ME_ENCRYPTION_KEY',  # SECURITY ISSUE: Hardcoded encryption key
+        'iv': 'REPLACE_ME_IV',      # SECURITY ISSUE: Hardcoded IV
         'salt': 'salt-for-password-hashing-fake'     # SECURITY ISSUE: Hardcoded salt
     }
     

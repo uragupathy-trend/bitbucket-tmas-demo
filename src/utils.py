@@ -25,7 +25,7 @@ class SecurityUtils:
     def __init__(self):
         """Initialize security utilities"""
         # SECURITY ISSUE: Hardcoded encryption key
-        self.encryption_key = "hardcoded-encryption-key-32-bytes"
+        self.encryption_key = "REPLACE_ME_ENCRYPTION_KEY"
         
         # SECURITY ISSUE: Weak random seed
         random.seed(12345)

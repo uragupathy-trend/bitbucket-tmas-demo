@@ -39,21 +39,21 @@ auth_manager = AuthManager()
 security_utils = SecurityUtils()
 
 # SECURITY ISSUE: Hardcoded AWS credentials (FAKE - for testing only)
-AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
-AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+AWS_ACCESS_KEY_ID = "REPLACE_ME_AWS_ACCESS_KEY_ID"
+AWS_SECRET_ACCESS_KEY = "REPLACE_ME_AWS_SECRET_ACCESS_KEY"
 AWS_REGION = "us-west-2"
 
 # SECURITY ISSUE: Hardcoded database credentials
-DB_PASSWORD = "super_secret_password_123"
+DB_PASSWORD = "REPLACE_ME_DB_PASSWORD"
 DB_CONNECTION_STRING = f"postgresql://admin:{DB_PASSWORD}@localhost:5432/visionone_demo"
 
 # SECURITY ISSUE: Hardcoded API keys (FAKE - for testing only)
-VISION_ONE_API_KEY = "fake-vision-one-api-key-12345-abcdef"
-GITHUB_TOKEN = "ghp_fake_github_token_for_testing_only_123456789"
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+VISION_ONE_API_KEY = "REPLACE_ME_VISION_ONE_API_KEY"
+GITHUB_TOKEN = "REPLACE_ME_GITHUB_TOKEN"
+SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/REPLACE_ME"
 
 # SECURITY ISSUE: JWT secret hardcoded
-JWT_SECRET = "jwt-super-secret-key-never-change-this"
+JWT_SECRET = "REPLACE_ME_JWT_SECRET"
 
 @app.route('/')
 def index():
